@@ -1,0 +1,13 @@
+{
+  "name": "AI 튜터",
+  "short_name": "AI튜터",
+  "description": "답을 알려주지 않고 힌트로 이끄는 수학 튜터",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
