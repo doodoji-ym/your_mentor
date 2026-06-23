@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { MathMarkdown } from "@/lib/markdown";
 
 export type ChatMessage = {
@@ -11,12 +12,19 @@ export type ChatMessage = {
 
 export function Chat({
   conversationId,
+  mode,
+  imageUrl,
+  initialUnderstanding,
   initialMessages,
 }: {
   conversationId: string;
+  mode: "solve" | "review";
+  imageUrl: string | null;
+  initialUnderstanding: number;
   initialMessages: ChatMessage[];
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [understanding, setUnderstanding] = useState(initialUnderstanding);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -41,6 +49,9 @@ export function Chat({
         body: JSON.stringify({ conversationId, text }),
       });
       const data = await res.json();
+      if (res.ok && typeof data.understanding === "number") {
+        setUnderstanding(data.understanding);
+      }
       const reply = res.ok
         ? data.reply
         : `오류가 났어: ${data.error ?? "알 수 없음"}`;
@@ -62,12 +73,29 @@ export function Chat({
     }
   }
 
-  const isEmpty = messages.length === 0;
-
   return (
-    <>
+    <main className="mx-auto flex h-screen max-w-2xl flex-col p-4">
+      <header className="mb-2 flex items-center justify-between">
+        <Link href="/learn" className="text-sm text-gray-500 underline">
+          ← 목록
+        </Link>
+        <span className="text-xs text-gray-500">
+          {mode === "review" ? "해설 모드" : "풀이 모드"} · 이해도{" "}
+          <span className="font-semibold text-slate-700">{understanding}</span>
+        </span>
+      </header>
+
+      {imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageUrl}
+          alt="문제"
+          className="mb-3 max-h-56 w-full rounded border object-contain"
+        />
+      )}
+
       <div className="flex-1 space-y-3 overflow-y-auto rounded border bg-gray-50 p-3">
-        {isEmpty && (
+        {messages.length === 0 && (
           <p className="text-sm text-gray-500">
             문제에 대해 궁금한 걸 물어봐. 어디서 막혔는지 말해주면 거기서부터
             같이 풀어보자. (답은 바로 안 알려줘 — 힌트로 도와줄게!)
@@ -84,7 +112,7 @@ export function Chat({
               className={
                 m.sender === "student"
                   ? "max-w-[80%] rounded-2xl bg-slate-900 px-3 py-2 text-sm text-white"
-                  : "max-w-[85%] rounded-2xl bg-white px-3 py-2 text-sm shadow-sm"
+                  : "max-w-[85%] rounded-2xl bg-white px-3 py-2 text-sm text-slate-900 shadow-sm"
               }
             >
               {m.sender === "assistant" ? (
@@ -123,6 +151,6 @@ export function Chat({
           보내기
         </button>
       </div>
-    </>
+    </main>
   );
 }
