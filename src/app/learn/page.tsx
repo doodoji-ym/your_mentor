@@ -3,9 +3,16 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions";
 import { gradeLabel } from "@/lib/grade";
-import { createProblem } from "./actions";
+import { subjectLabel } from "@/lib/subjects";
+import { ProblemCapture } from "./problem-capture";
+import { startConcept } from "./actions";
 
-export default async function LearnPage() {
+export default async function LearnPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ blocked?: string; error?: string }>;
+}) {
+  const { blocked, error } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,24 +21,35 @@ export default async function LearnPage() {
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("display_name, grade")
+    .select("display_name, grade, allowed_subjects")
     .eq("id", user.id)
     .single();
+  const allowed: string[] = me?.allowed_subjects ?? ["math"];
 
   const { data: conversations } = await supabase
     .from("conversations")
-    .select("id, problem_text, understanding_score, answer_disclosed, created_at")
+    .select("id, subject, is_concept, understanding_score, answer_disclosed, created_at")
     .eq("student_id", user.id)
     .order("created_at", { ascending: false });
 
+  const blockedMsg =
+    blocked === "other"
+      ? "수학·영어 문제만 올릴 수 있어요. 다시 찍어볼래?"
+      : blocked
+        ? `${subjectLabel(blocked)} 과목은 배정되어 있지 않아요. 선생님께 문의하세요.`
+        : error === "nofile"
+          ? "사진을 선택해줘."
+          : null;
+
   return (
-    <main className="mx-auto max-w-2xl space-y-8 p-6">
+    <main className="mx-auto max-w-md space-y-6 p-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">학습</h1>
           <p className="text-sm text-gray-500">
             {me?.display_name}
-            {gradeLabel(me?.grade) ? ` · ${gradeLabel(me?.grade)}` : ""}
+            {gradeLabel(me?.grade) ? ` · ${gradeLabel(me?.grade)}` : ""} ·{" "}
+            {allowed.map((s) => subjectLabel(s)).join("·")}
           </p>
         </div>
         <form action={signOut}>
@@ -39,30 +57,28 @@ export default async function LearnPage() {
         </form>
       </header>
 
-      <section className="rounded-lg border p-4">
-        <h2 className="mb-3 font-semibold">새 문제</h2>
-        <form action={createProblem} className="space-y-3">
-          <input
-            name="image"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="block w-full text-sm"
-          />
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input type="checkbox" name="mode" value="review" />
-            답지/해설이 있는 문제예요 (review 모드)
-          </label>
-          <button className="w-full rounded bg-slate-900 px-4 py-2 text-white">
-            문제 올리고 시작
+      {blockedMsg && (
+        <p className="rounded bg-amber-50 p-3 text-sm text-amber-800">
+          {blockedMsg}
+        </p>
+      )}
+
+      <section className="space-y-3">
+        <ProblemCapture />
+        <form action={startConcept}>
+          <button className="w-full rounded-xl border px-4 py-5 text-center text-base font-semibold text-slate-800">
+            💬 개념·용어 질문하기
           </button>
         </form>
+        <p className="text-center text-xs text-gray-400">
+          모르는 문제는 찍어서, 헷갈리는 개념은 질문으로 시작해요.
+        </p>
       </section>
 
       <section className="space-y-2">
-        <h2 className="font-semibold">지난 문제</h2>
+        <h2 className="font-semibold">지난 기록</h2>
         {(conversations ?? []).length === 0 && (
-          <p className="text-sm text-gray-500">아직 푼 문제가 없어요.</p>
+          <p className="text-sm text-gray-500">아직 기록이 없어요.</p>
         )}
         {(conversations ?? []).map((c) => (
           <Link
@@ -71,11 +87,15 @@ export default async function LearnPage() {
             className="flex items-center justify-between rounded-lg border px-4 py-3 hover:bg-gray-50"
           >
             <span className="text-sm">
-              {c.problem_text?.slice(0, 30) || "문제 풀이"}
+              {c.is_concept ? "💬 개념질문" : "📷 문제풀이"}
+              <span className="ml-2 text-xs text-gray-400">
+                {subjectLabel(c.subject)}
+              </span>
             </span>
             <span className="text-xs text-gray-500">
-              이해도 {c.understanding_score}
-              {c.answer_disclosed ? " · ✅" : ""}
+              {c.is_concept
+                ? ""
+                : `이해도 ${c.understanding_score}${c.answer_disclosed ? " ✅" : ""}`}
             </span>
           </Link>
         ))}

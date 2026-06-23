@@ -30,6 +30,11 @@ export async function createStudent(formData: FormData) {
   const displayName = String(formData.get("display_name") || "").trim();
   const gradeRaw = formData.get("grade");
   const grade = gradeRaw ? Number(gradeRaw) : null;
+  const subjects = formData
+    .getAll("subjects")
+    .map(String)
+    .filter((s) => s === "math" || s === "english");
+  const allowedSubjects = subjects.length ? subjects : ["math"];
 
   const admin = createAdminClient();
 
@@ -51,6 +56,7 @@ export async function createStudent(formData: FormData) {
       grade,
       created_by: teacherId,
       display_name: displayName || email.split("@")[0],
+      allowed_subjects: allowedSubjects,
     })
     .eq("id", studentId);
 

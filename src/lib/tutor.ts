@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { buildTutorSystemPrompt, type TutorMode } from "./prompts";
+import type { Subject } from "./subjects";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -40,13 +41,20 @@ function clamp(n: unknown): number {
 
 // 메인 튜터 호출 → (이해도<90이면) 출력 검증 레이어로 답 누설 점검.
 export async function runTutorTurn(opts: {
+  subject: Subject;
   grade: number | null;
   mode: TutorMode;
+  isConcept?: boolean;
   history: TurnMsg[];
   studentText: string;
   imageUrl?: string | null;
 }): Promise<TutorResult> {
-  const system = buildTutorSystemPrompt({ grade: opts.grade, mode: opts.mode });
+  const system = buildTutorSystemPrompt({
+    subject: opts.subject,
+    grade: opts.grade,
+    mode: opts.mode,
+    isConcept: opts.isConcept,
+  });
 
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: system },
@@ -93,7 +101,7 @@ export async function runTutorTurn(opts: {
     };
   }
 
-  if (understanding < 90) {
+  if (!opts.isConcept && understanding < 90) {
     const leaked = await checkLeak(reply);
     if (leaked) {
       reply =

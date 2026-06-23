@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions";
 import { GRADE_OPTIONS, gradeLabel } from "@/lib/grade";
+import { subjectLabel } from "@/lib/subjects";
 import { createStudent, deleteStudent } from "./actions";
 
 export default async function StudentsPage() {
@@ -28,7 +29,7 @@ export default async function StudentsPage() {
   const { data: students } = ids.length
     ? await supabase
         .from("profiles")
-        .select("id, display_name, grade, created_at")
+        .select("id, display_name, grade, allowed_subjects, created_at")
         .in("id", ids)
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -82,6 +83,17 @@ export default async function StudentsPage() {
             required
             className="rounded border px-3 py-2"
           />
+          <div className="col-span-2 flex items-center gap-4 text-sm">
+            <span className="text-gray-500">배정 과목:</span>
+            <label className="flex items-center gap-1">
+              <input type="checkbox" name="subjects" value="math" defaultChecked />
+              수학
+            </label>
+            <label className="flex items-center gap-1">
+              <input type="checkbox" name="subjects" value="english" />
+              영어
+            </label>
+          </div>
           <button className="col-span-2 rounded bg-slate-900 px-4 py-2 text-white">
             등록
           </button>
@@ -100,7 +112,10 @@ export default async function StudentsPage() {
             <div>
               <p className="font-medium">{s.display_name}</p>
               <p className="text-sm text-gray-500">
-                {gradeLabel(s.grade) ?? "학년 미설정"}
+                {gradeLabel(s.grade) ?? "학년 미설정"} ·{" "}
+                {(s.allowed_subjects ?? ["math"])
+                  .map((sub: string) => subjectLabel(sub))
+                  .join("·")}
               </p>
             </div>
             <div className="flex items-center gap-3">

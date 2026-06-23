@@ -247,6 +247,17 @@ problem_attempts / mistakes  (오답 누적)
 - **비용 최대 변수 = 추론(reasoning) 토큰량.** 어려운 문제에서 턴당 토큰이 급증하므로 **난이도별 reasoning effort 조절 + 쉬운 문제는 GPT-5 mini 라우팅**이 핵심 절감 레버.
 - ⚠️ 단가는 변동되므로 [platform.openai.com/pricing](https://platform.openai.com/pricing)에서 확인. 실제 문제당 비용은 Phase 0 파일럿에서 측정 확정.
 
+## 8.6 과목 배정·자동분류·진입 플로우 (구현됨)
+
+- **과목 배정**: `profiles.allowed_subjects subject_t[]` (수학만/영어만/둘다). 교사가 학생 등록 시 지정.
+- **진입 CTA 2종** (학생 `/learn`):
+  - **📷 문제 찍기** — 사진 업로드 → R2 → **자동 분류**(gpt-5-mini vision) → 배정 과목이면 대화 생성, 아니면 차단(`/learn?blocked=`).
+  - **💬 개념 질문** — 사진 없이 시작. 배정 과목 1개면 그 과목, 2개면 첫 메시지에서 분류. `conversations.is_concept=true`.
+- **서브에이전트 라우팅**: 분류된 `subject`로 과목별 시스템 프롬프트 선택(수학 가드레일 vs 영어 가드레일). `src/lib/classify.ts` → `src/lib/prompts.ts`.
+- **차단**: 분류 결과가 `other`이거나 배정 과목이 아니면 진행 차단(예: 영어만 배정 학생이 수학 업로드 → 막힘). `/api/tutor`에도 방어 로직 중복.
+- **개념 모드**: `is_concept=true`면 답-게이팅 미적용 — 개념을 학년 수준으로 자유롭게 설명(누설 검증 skip).
+- **스키마 변경**: `conversations.subject` nullable화(개념질문 지연 분류용), `conversations.is_concept` 추가.
+
 ## 9. 미해결/결정 필요 사항
 - [ ] 제품 이름 (보류 중)
 - [ ] 관리자가 전 학생 데이터 조회 가능 여부(프라이버시 정책)
