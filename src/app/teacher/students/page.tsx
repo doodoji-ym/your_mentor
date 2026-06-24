@@ -80,8 +80,9 @@ export default async function StudentsPage() {
           <input
             name="password"
             type="text"
-            placeholder="초기 비밀번호"
+            placeholder="초기 비밀번호(6자+)"
             required
+            minLength={6}
             className="rounded border px-3 py-2"
           />
           <div className="col-span-2 flex items-center gap-4 text-sm">
