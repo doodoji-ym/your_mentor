@@ -258,6 +258,15 @@ problem_attempts / mistakes  (오답 누적)
 - **개념 모드**: `is_concept=true`면 답-게이팅 미적용 — 개념을 학년 수준으로 자유롭게 설명(누설 검증 skip).
 - **스키마 변경**: `conversations.subject` nullable화(개념질문 지연 분류용), `conversations.is_concept` 추가.
 
+## 8.7 숙제 출제 (교사) — 구현됨
+
+- **대화 요약**: 첫 튜터 턴에서 `conversations.summary`(한 줄)를 gpt-5-mini로 생성·저장 → 교사 리스트 표시용.
+- **출제 UI**(`/teacher/students/[id]`): 학생 대화 목록을 체크박스로 다중선택 + 문제 수 + 마감(datetime) → "숙제 내기".
+- **유사문제 생성**: 선택 대화 요약을 토픽으로 GPT-5가 비슷한 유형 N개 생성(정답 미포함). `src/lib/homework.ts`.
+- **스키마**: `assignments`(teacher/student/title/deadline/status), `assignment_problems`(position/problem_text). 정답은 저장 안 함 — 채점(③) 시 GPT-5가 직접 풀어 비교.
+- **RLS**: 교사는 자기 과제 CRUD, 학생은 자기 과제·문제 읽기.
+- 미구현(다음): ③ 학생 풀이 사진 업로드 → 자동채점, ④ 알림(Web Push).
+
 ## 9. 미해결/결정 필요 사항
 - [ ] 제품 이름 (보류 중)
 - [ ] 관리자가 전 학생 데이터 조회 가능 여부(프라이버시 정책)

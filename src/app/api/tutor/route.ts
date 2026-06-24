@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { runTutorTurn, type TurnMsg } from "@/lib/tutor";
 import { classifySubject } from "@/lib/classify";
+import { summarizeConversation } from "@/lib/homework";
 import { subjectLabel, type Subject } from "@/lib/subjects";
 
 export async function POST(req: NextRequest) {
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   const { data: conv } = await supabase
     .from("conversations")
-    .select("id, subject, mode, is_concept, problem_image_url, answer_disclosed, understanding_score")
+    .select("id, subject, mode, is_concept, summary, problem_image_url, answer_disclosed, understanding_score")
     .eq("id", conversationId)
     .single();
   if (!conv) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
   const history = (historyRows ?? []) as TurnMsg[];
+  const isFirstTurn = history.length === 0;
 
   // 학생 메시지 저장
   await supabase.from("messages").insert({
@@ -125,6 +127,20 @@ export async function POST(req: NextRequest) {
       answer_disclosed: conv.answer_disclosed || result.disclosed,
     })
     .eq("id", conversationId);
+
+  // 첫 턴이면 교사 리스트용 한 줄 요약 생성·저장
+  if (isFirstTurn && !conv.summary) {
+    const summary = await summarizeConversation({
+      text,
+      imageUrl: conv.problem_image_url,
+    });
+    if (summary) {
+      await supabase
+        .from("conversations")
+        .update({ summary })
+        .eq("id", conversationId);
+    }
+  }
 
   return NextResponse.json({
     reply: result.reply,
