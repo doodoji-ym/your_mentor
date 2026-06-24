@@ -4,11 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { MathMarkdown } from "@/lib/markdown";
 import { ZoomableImage } from "@/lib/zoomable-image";
+import { compressImage } from "@/lib/compress";
 
 export type ChatMessage = {
   id: string;
   sender: "student" | "assistant";
   content: string;
+  image_url?: string | null;
 };
 
 export function Chat({
@@ -27,27 +29,54 @@ export function Chat({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [understanding, setUnderstanding] = useState(initialUnderstanding);
   const [input, setInput] = useState("");
+  const [attached, setAttached] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  async function attach() {
+    const file = fileRef.current?.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file).catch(() => file);
+      const fd = new FormData();
+      fd.append("image", compressed);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) setAttached(data.url);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
   async function send() {
     const text = input.trim();
-    if (!text || loading) return;
+    if ((!text && !attached) || loading) return;
+    const sentImage = attached;
     setInput("");
+    setAttached(null);
     setMessages((m) => [
       ...m,
-      { id: `tmp-${Date.now()}`, sender: "student", content: text },
+      {
+        id: `tmp-${Date.now()}`,
+        sender: "student",
+        content: text,
+        image_url: sentImage,
+      },
     ]);
     setLoading(true);
     try {
       const res = await fetch("/api/tutor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, text }),
+        body: JSON.stringify({ conversationId, text, imageUrl: sentImage }),
       });
       const data = await res.json();
       if (res.ok && typeof data.understanding === "number") {
@@ -91,8 +120,8 @@ export function Chat({
       <div className="flex-1 space-y-3 overflow-y-auto rounded border bg-gray-50 p-3">
         {messages.length === 0 && (
           <p className="text-sm text-gray-500">
-            문제에 대해 궁금한 걸 물어봐. 어디서 막혔는지 말해주면 거기서부터
-            같이 풀어보자. (답은 바로 안 알려줘 — 힌트로 도와줄게!)
+            문제에 대해 궁금한 걸 물어봐. 푼 걸 사진으로 올려도 돼. (답은 바로 안
+            알려줘 — 힌트로 도와줄게!)
           </p>
         )}
         {messages.map((m) => (
@@ -109,10 +138,17 @@ export function Chat({
                   : "max-w-[85%] rounded-2xl bg-white px-3 py-2 text-sm text-slate-900 shadow-sm"
               }
             >
+              {m.image_url && (
+                <ZoomableImage
+                  src={m.image_url}
+                  alt="첨부"
+                  className="mb-1 max-h-44 cursor-zoom-in rounded object-contain"
+                />
+              )}
               {m.sender === "assistant" ? (
                 <MathMarkdown>{m.content}</MathMarkdown>
               ) : (
-                m.content
+                m.content && <span>{m.content}</span>
               )}
             </div>
           </div>
@@ -127,7 +163,40 @@ export function Chat({
         <div ref={bottomRef} />
       </div>
 
+      {attached && (
+        <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+          <ZoomableImage
+            src={attached}
+            alt="첨부 미리보기"
+            className="h-12 w-12 cursor-zoom-in rounded border object-cover"
+          />
+          <span>사진 첨부됨</span>
+          <button
+            onClick={() => setAttached(null)}
+            className="text-red-500 underline"
+          >
+            제거
+          </button>
+        </div>
+      )}
+
       <div className="mt-3 flex gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={attach}
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading || loading}
+          className="rounded border px-3 py-2 text-lg disabled:opacity-50"
+          title="사진 첨부"
+        >
+          {uploading ? "…" : "📷"}
+        </button>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -139,7 +208,7 @@ export function Chat({
         />
         <button
           onClick={send}
-          disabled={loading}
+          disabled={loading || uploading}
           className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
         >
           보내기

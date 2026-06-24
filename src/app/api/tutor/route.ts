@@ -6,10 +6,12 @@ import { summarizeConversation } from "@/lib/homework";
 import { subjectLabel, type Subject } from "@/lib/subjects";
 
 export async function POST(req: NextRequest) {
-  const { conversationId, text } = await req.json();
+  const { conversationId, text, imageUrl } = await req.json();
   if (!conversationId || typeof text !== "string") {
     return NextResponse.json({ error: "bad request" }, { status: 400 });
   }
+  const turnImage: string | null =
+    typeof imageUrl === "string" && imageUrl ? imageUrl : null;
 
   const supabase = await createClient();
   const {
@@ -40,11 +42,12 @@ export async function POST(req: NextRequest) {
   const history = (historyRows ?? []) as TurnMsg[];
   const isFirstTurn = history.length === 0;
 
-  // 학생 메시지 저장
+  // 학생 메시지 저장 (이미지 첨부 포함)
   await supabase.from("messages").insert({
     conversation_id: conversationId,
     sender: "student",
     content: text,
+    image_url: turnImage,
   });
 
   // 과목 결정: 이미 정해졌으면 그대로, 아니면(개념질문) 분류
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest) {
   if (!subject) {
     const detected = await classifySubject({
       text,
-      imageUrl: conv.problem_image_url,
+      imageUrl: conv.problem_image_url ?? turnImage,
     });
     if (detected === "other" || !allowed.includes(detected)) {
       const blockMsg =
@@ -103,7 +106,7 @@ export async function POST(req: NextRequest) {
       isConcept: conv.is_concept,
       history,
       studentText: text,
-      imageUrl: conv.problem_image_url,
+      imageUrls: [conv.problem_image_url, turnImage],
     });
   } catch (e) {
     return NextResponse.json(

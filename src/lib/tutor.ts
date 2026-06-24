@@ -47,7 +47,7 @@ export async function runTutorTurn(opts: {
   isConcept?: boolean;
   history: TurnMsg[];
   studentText: string;
-  imageUrl?: string | null;
+  imageUrls?: (string | null | undefined)[];
 }): Promise<TutorResult> {
   const system = buildTutorSystemPrompt({
     subject: opts.subject,
@@ -69,8 +69,8 @@ export async function runTutorTurn(opts: {
   const userParts: OpenAI.Chat.ChatCompletionContentPart[] = [
     { type: "text", text: opts.studentText || "이 문제 풀이를 도와줘." },
   ];
-  if (opts.imageUrl) {
-    userParts.push({ type: "image_url", image_url: { url: opts.imageUrl } });
+  for (const url of opts.imageUrls ?? []) {
+    if (url) userParts.push({ type: "image_url", image_url: { url } });
   }
   messages.push({ role: "user", content: userParts });
 

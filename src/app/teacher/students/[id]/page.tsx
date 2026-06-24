@@ -49,7 +49,7 @@ export default async function StudentLogPage({
   const { data: messages } = selectedConv
     ? await supabase
         .from("messages")
-        .select("id, sender, content, guardrail_flag, understanding_at_turn")
+        .select("id, sender, content, image_url, guardrail_flag, understanding_at_turn")
         .eq("conversation_id", selectedConv)
         .order("created_at", { ascending: true })
     : { data: null };
@@ -185,6 +185,13 @@ export default async function StudentLogPage({
                     : "max-w-[85%] rounded-2xl border bg-white px-3 py-2 text-sm text-slate-900"
                 }
               >
+                {m.image_url && (
+                  <ZoomableImage
+                    src={m.image_url}
+                    alt="첨부"
+                    className="mb-1 max-h-44 cursor-zoom-in rounded object-contain"
+                  />
+                )}
                 {m.sender === "assistant" ? (
                   <>
                     <MathMarkdown>{m.content}</MathMarkdown>
