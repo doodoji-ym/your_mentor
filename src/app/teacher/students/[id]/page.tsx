@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MathMarkdown } from "@/lib/markdown";
 import { gradeLabel } from "@/lib/grade";
 import { subjectLabel } from "@/lib/subjects";
+import { ZoomableImage } from "@/lib/zoomable-image";
 import { createAssignment } from "./actions";
 
 export default async function StudentLogPage({
@@ -31,9 +32,13 @@ export default async function StudentLogPage({
 
   const { data: conversations } = await supabase
     .from("conversations")
-    .select("id, subject, summary, is_concept, understanding_score, created_at")
+    .select("id, subject, summary, is_concept, understanding_score, problem_image_url, created_at")
     .eq("student_id", id)
     .order("created_at", { ascending: false });
+
+  const selectedConvImage = selectedConv
+    ? (conversations ?? []).find((c) => c.id === selectedConv)?.problem_image_url
+    : null;
 
   const { data: assignments } = await supabase
     .from("assignments")
@@ -159,6 +164,13 @@ export default async function StudentLogPage({
       {selectedConv && (
         <section className="space-y-3">
           <h2 className="font-semibold">대화 상세</h2>
+          {selectedConvImage && (
+            <ZoomableImage
+              src={selectedConvImage}
+              alt="문제"
+              className="max-h-72 w-full cursor-zoom-in rounded border object-contain"
+            />
+          )}
           {(messages ?? []).map((m) => (
             <div
               key={m.id}

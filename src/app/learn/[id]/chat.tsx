@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { MathMarkdown } from "@/lib/markdown";
+import { ZoomableImage } from "@/lib/zoomable-image";
 
 export type ChatMessage = {
   id: string;
@@ -85,14 +86,7 @@ export function Chat({
         </span>
       </header>
 
-      {imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageUrl}
-          alt="문제"
-          className="mb-3 max-h-56 w-full rounded border object-contain"
-        />
-      )}
+      {imageUrl && <ZoomableImage src={imageUrl} alt="문제" />}
 
       <div className="flex-1 space-y-3 overflow-y-auto rounded border bg-gray-50 p-3">
         {messages.length === 0 && (
