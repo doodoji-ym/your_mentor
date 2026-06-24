@@ -21,10 +21,11 @@ export default async function LoginPage({
 
         <form className="space-y-3">
           <input
-            name="email"
-            type="email"
+            name="id"
+            type="text"
             required
-            placeholder="이메일"
+            placeholder="아이디"
+            autoCapitalize="off"
             className="w-full rounded border px-3 py-2"
           />
           <input

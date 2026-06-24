@@ -32,6 +32,12 @@ export default async function LearnPage({
     .eq("student_id", user.id)
     .order("created_at", { ascending: false });
 
+  const { data: assignments } = await supabase
+    .from("assignments")
+    .select("id, title, status, deadline, assignment_problems(count)")
+    .eq("student_id", user.id)
+    .order("created_at", { ascending: false });
+
   const blockedMsg =
     blocked === "other"
       ? "수학·영어 문제만 올릴 수 있어요. 다시 찍어볼래?"
@@ -74,6 +80,37 @@ export default async function LearnPage({
           모르는 문제는 찍어서, 헷갈리는 개념은 질문으로 시작해요.
         </p>
       </section>
+
+      {(assignments ?? []).length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold">숙제</h2>
+          {(assignments ?? []).map((a) => {
+            const n =
+              (a.assignment_problems as { count: number }[] | null)?.[0]
+                ?.count ?? 0;
+            return (
+              <Link
+                key={a.id}
+                href={`/learn/homework/${a.id}`}
+                className="flex items-center justify-between rounded-lg border px-4 py-3 hover:bg-gray-50"
+              >
+                <span className="text-sm font-medium">
+                  📝 {a.title}
+                  <span className="ml-2 text-xs font-normal text-gray-400">
+                    {n}문제
+                    {a.deadline
+                      ? ` · ~${new Date(a.deadline).toLocaleDateString("ko-KR")}`
+                      : ""}
+                  </span>
+                </span>
+                <span className="text-xs text-gray-500">
+                  {a.status === "graded" ? "완료" : "풀어야 해요"}
+                </span>
+              </Link>
+            );
+          })}
+        </section>
+      )}
 
       <section className="space-y-2">
         <h2 className="font-semibold">지난 기록</h2>

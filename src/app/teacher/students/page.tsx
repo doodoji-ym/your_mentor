@@ -29,7 +29,7 @@ export default async function StudentsPage() {
   const { data: students } = ids.length
     ? await supabase
         .from("profiles")
-        .select("id, display_name, grade, allowed_subjects, created_at")
+        .select("id, display_name, login_id, grade, allowed_subjects, created_at")
         .in("id", ids)
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -70,10 +70,11 @@ export default async function StudentsPage() {
             ))}
           </select>
           <input
-            name="email"
-            type="email"
-            placeholder="로그인 이메일"
+            name="login_id"
+            type="text"
+            placeholder="로그인 아이디(4자+)"
             required
+            autoCapitalize="off"
             className="rounded border px-3 py-2"
           />
           <input
@@ -110,7 +111,14 @@ export default async function StudentsPage() {
             className="flex items-center justify-between rounded-lg border px-4 py-3"
           >
             <div>
-              <p className="font-medium">{s.display_name}</p>
+              <p className="font-medium">
+                {s.display_name}
+                {s.login_id && (
+                  <span className="ml-2 text-xs font-normal text-gray-400">
+                    @{s.login_id}
+                  </span>
+                )}
+              </p>
               <p className="text-sm text-gray-500">
                 {gradeLabel(s.grade) ?? "학년 미설정"} ·{" "}
                 {(s.allowed_subjects ?? ["math"])

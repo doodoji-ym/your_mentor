@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { toLoginEmail, isPlainId, validatePlainId } from "@/lib/auth-id";
 
 // 현재 사용자가 teacher(또는 admin)인지 확인하고 id 반환.
 async function requireTeacher() {
@@ -25,7 +26,10 @@ async function requireTeacher() {
 export async function createStudent(formData: FormData) {
   const teacherId = await requireTeacher();
 
-  const email = String(formData.get("email"));
+  const loginId = String(formData.get("login_id") || "").trim();
+  const idErr = isPlainId(loginId) ? validatePlainId(loginId) : null;
+  if (idErr) throw new Error(idErr);
+  const email = toLoginEmail(loginId);
   const password = String(formData.get("password"));
   const displayName = String(formData.get("display_name") || "").trim();
   const gradeRaw = formData.get("grade");
@@ -55,7 +59,8 @@ export async function createStudent(formData: FormData) {
       role: "student",
       grade,
       created_by: teacherId,
-      display_name: displayName || email.split("@")[0],
+      display_name: displayName || loginId,
+      login_id: loginId,
       allowed_subjects: allowedSubjects,
     })
     .eq("id", studentId);

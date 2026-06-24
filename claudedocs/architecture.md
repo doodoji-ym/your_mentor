@@ -267,6 +267,18 @@ problem_attempts / mistakes  (오답 누적)
 - **RLS**: 교사는 자기 과제 CRUD, 학생은 자기 과제·문제 읽기.
 - 미구현(다음): ③ 학생 풀이 사진 업로드 → 자동채점, ④ 알림(Web Push).
 
+## 8.8 숙제 자동채점 (학생) + 로그인 아이디 — 구현됨
+
+- **로그인 아이디**: 이메일 형식 불필요. 일반 문자열(4자+, `[a-zA-Z0-9._-]`)을 받아 내부적으로 `id@yourmentor.local` 합성 이메일로 Supabase Auth에 사용(`src/lib/auth-id.ts`). 기존 `@` 포함 이메일은 그대로. `profiles.login_id`에 표시용 저장.
+- **자동채점 흐름**(문제별): `/learn/homework/[id]`에서 문제마다 **풀이 사진 1장 업로드** → `/api/grade` → GPT-5 비전 채점.
+  - 맞음 → ✅ 종료.
+  - 1차 오답 → 어디가 틀렸는지 피드백 + "다시 한 번 풀어봐"(정답 비공개).
+  - 2차 오답 → 📘 전체 풀이·정답 공개하고 종료.
+  - 모든 문제 종료 시 `assignments.status='graded'`.
+- **스키마**: `assignment_problems`에 attempts/resolved/correct/feedback/submission_url, `assignments.subject` 추가.
+- 채점 쓰기는 service_role(admin)로 처리(학생 소유 확인 후) — RLS 완화 없이.
+- 미구현: ④ 알림(Web Push) — 숙제 출제·채점 시.
+
 ## 9. 미해결/결정 필요 사항
 - [ ] 제품 이름 (보류 중)
 - [ ] 관리자가 전 학생 데이터 조회 가능 여부(프라이버시 정책)

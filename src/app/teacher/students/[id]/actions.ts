@@ -56,6 +56,7 @@ export async function createAssignment(formData: FormData) {
     .insert({
       teacher_id: user.id,
       student_id: studentId,
+      subject,
       title: `${subjectLabel(subject)} 숙제 (${problems.length}문제)`,
       deadline: deadlineRaw ? new Date(deadlineRaw).toISOString() : null,
     })
